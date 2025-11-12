@@ -11,9 +11,20 @@ const (
 	ErrorNotFound    ErrorCode = "NOT_FOUND"
 )
 
-type ErrorResponse struct {
-	Error struct {
-		Code    ErrorCode `json:"code"`
-		Message string    `json:"message"`
-	} `json:"error"`
+type AppError struct {
+	Code    ErrorCode `json:"code"`
+	Message string    `json:"message"`
 }
+
+func (e AppError) Error() string {
+	return e.Message
+}
+
+var (
+	ErrTeamExists  = AppError{Code: ErrorTeamExists, Message: "team already exists"}
+	ErrNotFound    = AppError{Code: ErrorNotFound, Message: "team not found"}
+	ErrPRExists    = AppError{Code: ErrorPRExists, Message: "pull request already exists"}
+	ErrNotAssigned = AppError{Code: ErrorNotAssigned, Message: "not assigned"}
+	ErrNoCandidate = AppError{Code: ErrorNoCandidate, Message: "no candidate"}
+	ErrPRMerged    = AppError{Code: ErrorPRMerged, Message: "pull request already merged"}
+)

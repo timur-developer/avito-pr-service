@@ -17,6 +17,7 @@ services:
 
   migrate:
     image: migrate/migrate:v4.17.0
+    restart: no
     volumes:
       - ./migrations:/migrations
     command:
@@ -26,7 +27,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    restart: unless-stopped
 
   api:
     build: .

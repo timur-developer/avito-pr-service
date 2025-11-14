@@ -2,7 +2,7 @@ package handler
 
 import (
 	"avito-pr-service/internal/models"
-	"avito-pr-service/internal/server"
+	"avito-pr-service/internal/server/response"
 	"avito-pr-service/internal/usecase"
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
@@ -32,38 +32,43 @@ func (h *TeamHandler) AddTeam(w http.ResponseWriter, r *http.Request) {
 	var team models.Team
 	if err := json.NewDecoder(r.Body).Decode(&team); err != nil {
 		h.log.Warn("invalid JSON", "error", err)
-		server.BadRequest(w, "invalid JSON")
+		response.BadRequest(w, "invalid JSON")
 		return
 	}
 
 	if err := models.Validate(&team); err != nil {
 		h.log.Warn("validation failed", "error", err, "team", team)
-		server.BadRequest(w, err.Error())
+		response.ValidationError(w, err)
 		return
 	}
 
 	if err := h.uc.AddTeam(r.Context(), team); err != nil {
 		h.log.Error("usecase error", "error", err, "team_name", team.Name)
-		server.Error(w, err, http.StatusInternalServerError)
+		response.Error(w, err, http.StatusInternalServerError)
 		return
 	}
 
+	createdTeam, err := h.uc.GetTeam(r.Context(), team.Name)
+	if err != nil {
+		response.Error(w, err, http.StatusInternalServerError)
+	}
+
 	h.log.Info("team created", "team_name", team.Name, "members_count", len(team.Members))
-	server.JSON(w, map[string]string{"status": "ok"}, http.StatusOK)
+	response.JSON(w, createdTeam, http.StatusOK)
 }
 
 func (h *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("team_name")
 	if name == "" {
-		server.BadRequest(w, "team_name required")
+		response.BadRequest(w, "team_name required")
 		return
 	}
 
 	team, err := h.uc.GetTeam(r.Context(), name)
 	if err != nil {
-		server.Error(w, err, http.StatusInternalServerError)
+		response.Error(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	server.JSON(w, team, http.StatusOK)
+	response.JSON(w, team, http.StatusOK)
 }

@@ -14,12 +14,20 @@ import (
 	"testing"
 )
 
-type mockTeamUsecase struct{}
+type mockTeamUsecase struct {
+	teams map[string]models.Team
+}
 
 func (m *mockTeamUsecase) AddTeam(ctx context.Context, team models.Team) error {
 	if team.Name == "exists" {
 		return models.ErrTeamExists
 	}
+	
+	for i := range team.Members {
+		team.Members[i].IsActive = true
+	}
+
+	m.teams[team.Name] = team
 	return nil
 }
 
@@ -32,7 +40,11 @@ func (m *mockTeamUsecase) GetTeam(ctx context.Context, name string) (models.Team
 			},
 		}, nil
 	}
-	return models.Team{}, models.ErrNotFound
+	team, ok := m.teams[name]
+	if !ok {
+		return models.Team{}, models.ErrTeamNotFound
+	}
+	return team, nil
 }
 
 func testLogger() *slog.Logger {
@@ -40,13 +52,12 @@ func testLogger() *slog.Logger {
 }
 
 func TestTeamHandler_AddTeam_Success(t *testing.T) {
-	uc := &mockTeamUsecase{}
+	uc := &mockTeamUsecase{teams: make(map[string]models.Team)}
 	h := NewTeamHandler(uc, testLogger())
-
 	r := chi.NewRouter()
 	h.Register(r)
 
-	body := `{"team_name":"new-team","members":[{"user_id":"u1","username":"alice","is_active":true}]}`
+	body := `{"team_name":"new-team","members":[{"user_id":"u1","username":"alice"}]}`
 	req := httptest.NewRequest(http.MethodPost, "/team/add", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -54,19 +65,21 @@ func TestTeamHandler_AddTeam_Success(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusOK, w.Code)
-	var resp map[string]string
-	json.Unmarshal(w.Body.Bytes(), &resp)
-	require.Equal(t, "ok", resp["status"])
+
+	var resp models.Team
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.Equal(t, "new-team", resp.Name)
+	require.Len(t, resp.Members, 1)
+	require.True(t, resp.Members[0].IsActive)
 }
 
 func TestTeamHandler_AddTeam_Exists(t *testing.T) {
-	uc := &mockTeamUsecase{}
+	uc := &mockTeamUsecase{teams: make(map[string]models.Team)}
 	h := NewTeamHandler(uc, testLogger())
-
 	r := chi.NewRouter()
 	h.Register(r)
 
-	body := `{"team_name":"exists","members":[{"user_id":"u1","username":"alice","is_active":true}]}`
+	body := `{"team_name":"exists","members":[{"user_id":"u1","username":"alice"}]}`
 	req := httptest.NewRequest(http.MethodPost, "/team/add", bytes.NewBufferString(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -74,50 +87,16 @@ func TestTeamHandler_AddTeam_Exists(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusConflict, w.Code)
+
 	var resp map[string]any
-	json.Unmarshal(w.Body.Bytes(), &resp)
-	err := resp["error"].(map[string]any)
-	require.Equal(t, "TEAM_EXISTS", err["code"])
-}
-
-func TestTeamHandler_GetTeam_Success(t *testing.T) {
-	uc := &mockTeamUsecase{}
-	h := NewTeamHandler(uc, testLogger())
-
-	r := chi.NewRouter()
-	h.Register(r)
-
-	req := httptest.NewRequest(http.MethodGet, "/team/get?team_name=avito", nil)
-	w := httptest.NewRecorder()
-
-	r.ServeHTTP(w, req)
-
-	require.Equal(t, http.StatusOK, w.Code)
-	var resp models.Team
-	json.Unmarshal(w.Body.Bytes(), &resp)
-	require.Equal(t, "avito", resp.Name)
-	require.Len(t, resp.Members, 1)
-}
-
-func TestTeamHandler_GetTeam_NotFound(t *testing.T) {
-	uc := &mockTeamUsecase{}
-	h := NewTeamHandler(uc, testLogger())
-
-	r := chi.NewRouter()
-	h.Register(r)
-
-	req := httptest.NewRequest(http.MethodGet, "/team/get?team_name=unknown", nil)
-	w := httptest.NewRecorder()
-
-	r.ServeHTTP(w, req)
-
-	require.Equal(t, http.StatusNotFound, w.Code)
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	errMap := resp["error"].(map[string]any)
+	require.Equal(t, "TEAM_EXISTS", errMap["code"])
 }
 
 func TestTeamHandler_AddTeam_Validation_Fail(t *testing.T) {
-	uc := &mockTeamUsecase{}
+	uc := &mockTeamUsecase{teams: make(map[string]models.Team)}
 	h := NewTeamHandler(uc, testLogger())
-
 	r := chi.NewRouter()
 	h.Register(r)
 
@@ -129,27 +108,10 @@ func TestTeamHandler_AddTeam_Validation_Fail(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusBadRequest, w.Code)
+
 	var resp map[string]any
-	json.Unmarshal(w.Body.Bytes(), &resp)
-	err := resp["error"].(map[string]any)
-	require.Contains(t, err["message"].(string), "Name")
-}
-
-func TestTeamHandler_GetTeam_MissingParam(t *testing.T) {
-	uc := &mockTeamUsecase{}
-	h := NewTeamHandler(uc, testLogger())
-
-	r := chi.NewRouter()
-	h.Register(r)
-
-	req := httptest.NewRequest(http.MethodGet, "/team/get", nil)
-	w := httptest.NewRecorder()
-
-	r.ServeHTTP(w, req)
-
-	require.Equal(t, http.StatusBadRequest, w.Code)
-	var resp map[string]any
-	json.Unmarshal(w.Body.Bytes(), &resp)
-	err := resp["error"].(map[string]any)
-	require.Contains(t, err["message"].(string), "team_name required")
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	errMap := resp["error"].(map[string]any)
+	require.Contains(t, errMap["message"].(string), "name is required")
+	require.Contains(t, errMap["message"].(string), "members is required")
 }

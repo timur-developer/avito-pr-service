@@ -39,6 +39,8 @@ func (s *Store) Team() repository.TeamRepository {
 	return newTeamRepository(s.db)
 }
 
+func (s *Store) User() repository.UserRepository { return newUserRepository(s.db) }
+
 func (s *Store) Close() {
 	if s.db != nil {
 		s.db.Close()

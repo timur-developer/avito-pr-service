@@ -31,7 +31,7 @@ func (u *teamUsecase) AddTeam(ctx context.Context, team models.Team) error {
 		u.log.Warn("team already exists", "team_name", team.Name)
 		return models.ErrTeamExists
 	}
-	if !errors.Is(err, repository.ErrNotFound) {
+	if !errors.Is(err, models.ErrTeamNotFound) {
 		u.log.Error("database error on GetTeam", "error", err)
 		return err
 	}
@@ -42,7 +42,7 @@ func (u *teamUsecase) AddTeam(ctx context.Context, team models.Team) error {
 
 func (u *teamUsecase) GetTeam(ctx context.Context, name string) (models.Team, error) {
 	team, err := u.repo.GetTeam(ctx, name)
-	if errors.Is(err, repository.ErrNotFound) {
+	if errors.Is(err, models.ErrTeamNotFound) {
 		return team, models.ErrNotFound
 	}
 	return team, err

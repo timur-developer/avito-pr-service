@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"avito-pr-service/internal/models"
-	"avito-pr-service/internal/repository"
 	"context"
 	"errors"
 	"github.com/stretchr/testify/mock"
@@ -46,7 +45,7 @@ func TestTeamUsecase_AddTeam_Success(t *testing.T) {
 	repo := new(mockTeamRepository)
 	uc := NewTeamUsecase(repo, testLogger())
 
-	repo.On("GetTeam", mock.Anything, "new-team").Return(models.Team{}, repository.ErrNotFound)
+	repo.On("GetTeam", mock.Anything, "new-team").Return(models.Team{}, models.ErrTeamNotFound)
 	repo.On("CreateTeam", mock.Anything, mock.Anything).Return(nil)
 
 	err := uc.AddTeam(context.Background(), models.Team{Name: "new-team"})
@@ -59,7 +58,7 @@ func TestTeamUsecase_GetTeam_NotFound(t *testing.T) {
 	repo := new(mockTeamRepository)
 	uc := NewTeamUsecase(repo, testLogger())
 
-	repo.On("GetTeam", mock.Anything, "unknown").Return(models.Team{}, repository.ErrNotFound)
+	repo.On("GetTeam", mock.Anything, "unknown").Return(models.Team{}, models.ErrTeamNotFound)
 
 	_, err := uc.GetTeam(context.Background(), "unknown")
 	var appErr models.AppError

@@ -80,7 +80,7 @@ func (r *teamRepository) GetTeam(ctx context.Context, name string) (models.Team,
 	}
 
 	if len(team.Members) == 0 {
-		return team, repository.ErrNotFound
+		return team, models.ErrTeamNotFound
 	}
 
 	return team, nil

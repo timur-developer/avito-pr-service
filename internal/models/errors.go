@@ -20,11 +20,20 @@ func (e AppError) Error() string {
 	return e.Message
 }
 
+func (e AppError) Is(target error) bool {
+	t, ok := target.(AppError)
+	if !ok {
+		return false
+	}
+	return e.Code == t.Code
+}
+
 var (
-	ErrTeamExists  = AppError{Code: ErrorTeamExists, Message: "team already exists"}
-	ErrNotFound    = AppError{Code: ErrorNotFound, Message: "team not found"}
-	ErrPRExists    = AppError{Code: ErrorPRExists, Message: "pull request already exists"}
-	ErrNotAssigned = AppError{Code: ErrorNotAssigned, Message: "not assigned"}
-	ErrNoCandidate = AppError{Code: ErrorNoCandidate, Message: "no candidate"}
-	ErrPRMerged    = AppError{Code: ErrorPRMerged, Message: "pull request already merged"}
+	ErrTeamExists   = AppError{Code: ErrorTeamExists, Message: "team already exists"}
+	ErrTeamNotFound = AppError{Code: ErrorNotFound, Message: "team not found"}
+	ErrNotFound     = AppError{Code: ErrorNotFound, Message: "team not found"}
+	ErrPRExists     = AppError{Code: ErrorPRExists, Message: "pull request already exists"}
+	ErrNotAssigned  = AppError{Code: ErrorNotAssigned, Message: "not assigned"}
+	ErrNoCandidate  = AppError{Code: ErrorNoCandidate, Message: "no candidate"}
+	ErrPRMerged     = AppError{Code: ErrorPRMerged, Message: "pull request already merged"}
 )

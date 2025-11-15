@@ -17,4 +17,8 @@ type UserRepository interface {
 
 type PRRepository interface {
 	CreatePR(ctx context.Context, pr models.PullRequest) error
+	GetPR(ctx context.Context, prID string) (models.PullRequest, error)
+	MergePR(ctx context.Context, prID string) error
+	ReassignReviewer(ctx context.Context, prID, oldUID, newUID string) error
+	GetPRsByReviewer(ctx context.Context, userID string) ([]models.PullRequest, error)
 }

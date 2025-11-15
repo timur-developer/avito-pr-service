@@ -54,7 +54,7 @@ func (h *TeamHandler) AddTeam(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.log.Info("team created", "team_name", team.Name, "members_count", len(team.Members))
-	response.JSON(w, createdTeam, http.StatusOK)
+	response.JSON(w, createdTeam, http.StatusCreated)
 }
 
 func (h *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {

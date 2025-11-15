@@ -22,7 +22,7 @@ func (m *mockTeamUsecase) AddTeam(ctx context.Context, team models.Team) error {
 	if team.Name == "exists" {
 		return models.ErrTeamExists
 	}
-	
+
 	for i := range team.Members {
 		team.Members[i].IsActive = true
 	}
@@ -64,7 +64,7 @@ func TestTeamHandler_AddTeam_Success(t *testing.T) {
 
 	r.ServeHTTP(w, req)
 
-	require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, http.StatusCreated, w.Code)
 
 	var resp models.Team
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))

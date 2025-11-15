@@ -43,7 +43,7 @@ func (u *teamUsecase) AddTeam(ctx context.Context, team models.Team) error {
 func (u *teamUsecase) GetTeam(ctx context.Context, name string) (models.Team, error) {
 	team, err := u.repo.GetTeam(ctx, name)
 	if errors.Is(err, models.ErrTeamNotFound) {
-		return team, models.ErrNotFound
+		return team, models.ErrTeamNotFound
 	}
 	return team, err
 }

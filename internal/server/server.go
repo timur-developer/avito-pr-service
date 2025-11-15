@@ -31,11 +31,17 @@ func New(cfg config.Config) (*Server, error) {
 		Level: slog.LevelInfo,
 	})).With("service", "avito-pr-service")
 
-	teamUC := usecase.NewTeamUsecase(store.Team(), log)
-	userUC := usecase.NewUserUsecase(store.User(), log)
+	teamRepository := store.Team()
+	userRepository := store.User()
+	prRepository := store.PR()
+
+	teamUC := usecase.NewTeamUsecase(teamRepository, log)
+	userUC := usecase.NewUserUsecase(userRepository, log)
+	prUC := usecase.NewPRUsecase(prRepository, userRepository, teamRepository, log)
 
 	teamHandler := handler.NewTeamHandler(teamUC, log)
 	userHandler := handler.NewUserHandler(userUC, log)
+	prHandler := handler.NewPRHandler(prUC, log)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -43,6 +49,7 @@ func New(cfg config.Config) (*Server, error) {
 
 	teamHandler.Register(r)
 	userHandler.Register(r)
+	prHandler.Register(r)
 
 	httpSrv := &http.Server{
 		Addr:    ":" + cfg.Port,

@@ -34,7 +34,7 @@ func (u *prUsecase) CreatePR(ctx context.Context, req models.CreatePRRequest) (m
 	u.log.Info("creating PR", "id", req.ID, "author", req.AuthorID)
 
 	author, err := u.userRepo.GetUser(ctx, req.AuthorID)
-	if err != nil || !author.IsActive {
+	if err != nil {
 		if errors.Is(err, models.ErrUserNotFound) {
 			return models.PullRequest{}, models.ErrUserNotFound
 		}

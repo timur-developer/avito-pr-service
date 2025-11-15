@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_pr_reviewers_user on pr_reviewers(user_id);

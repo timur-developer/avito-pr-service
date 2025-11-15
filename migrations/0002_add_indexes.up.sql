@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_users_team_active ON users(team_name) WHERE is_active = true;

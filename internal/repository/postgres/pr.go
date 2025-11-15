@@ -120,17 +120,20 @@ func (r *prRepository) ReassignReviewer(ctx context.Context, prID, oldUID, newUI
 	}
 	defer tx.Rollback(ctx)
 
-	_, err = tx.Exec(ctx, `DELETE FROM pr_reviewers WHERE pr_id = $1 AND user_id = $2`, prID, oldUID)
+	_, err = tx.Exec(ctx, `
+        DELETE FROM pr_reviewers 
+        WHERE pr_id = $1 AND user_id = $2
+    `, prID, oldUID)
 	if err != nil {
 		return err
 	}
 
-	_, err = tx.Exec(ctx, `INSERT INTO pr_reviewers (pr_id, user_id) VALUES ($1, $2)`, prID, newUID)
+	_, err = tx.Exec(ctx, `
+        INSERT INTO pr_reviewers (pr_id, user_id) 
+        VALUES ($1, $2)
+        ON CONFLICT (pr_id, user_id) DO NOTHING
+    `, prID, newUID)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return models.ErrAlreadyAssigned
-		}
 		return err
 	}
 

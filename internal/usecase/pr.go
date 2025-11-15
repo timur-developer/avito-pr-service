@@ -132,7 +132,7 @@ func (u *prUsecase) ReassignReviewer(ctx context.Context, req models.ReassignReq
 		if m.UserID == pr.AuthorID {
 			continue
 		}
-		if m.UserID != req.OldReviewerID && m.IsActive && !slices.Contains(pr.AssignedReviewers, m.UserID) {
+		if m.UserID != req.OldReviewerID && m.IsActive {
 			candidates = append(candidates, m.UserID)
 		}
 	}
@@ -145,7 +145,9 @@ func (u *prUsecase) ReassignReviewer(ctx context.Context, req models.ReassignReq
 		return models.PullRequest{}, "", err
 	}
 
-	pr.AssignedReviewers = replaceReviewer(pr.AssignedReviewers, req.OldReviewerID, newUID)
+	pr.AssignedReviewers = removeReviewer(pr.AssignedReviewers, req.OldReviewerID)
+	pr.AssignedReviewers = addReviewerIfNotExists(pr.AssignedReviewers, newUID)
+
 	return pr, newUID, nil
 }
 
@@ -153,14 +155,17 @@ func (u *prUsecase) GetPRsByReviewer(ctx context.Context, userID string) ([]mode
 	return u.prRepo.GetPRsByReviewer(ctx, userID)
 }
 
-func replaceReviewer(reviewers []string, old, new string) []string {
-	for i, r := range reviewers {
-		if r == old {
-			reviewers[i] = new
-			return reviewers
-		}
+func removeReviewer(reviewers []string, uid string) []string {
+	return slices.DeleteFunc(reviewers, func(r string) bool {
+		return r == uid
+	})
+}
+
+func addReviewerIfNotExists(reviewers []string, uid string) []string {
+	if slices.Contains(reviewers, uid) {
+		return reviewers
 	}
-	return reviewers
+	return append(reviewers, uid)
 }
 
 func (u *prUsecase) GetUserStats(ctx context.Context) ([]models.UserStats, error) {

@@ -5,6 +5,7 @@ import (
 	"avito-pr-service/internal/server/response"
 	"avito-pr-service/internal/usecase"
 	"encoding/json"
+	"errors"
 	"github.com/go-chi/chi/v5"
 	"log/slog"
 	"net/http"
@@ -44,6 +45,10 @@ func (h *TeamHandler) AddTeam(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.uc.AddTeam(r.Context(), team); err != nil {
 		h.log.Error("usecase error", "error", err, "team_name", team.Name)
+		if errors.Is(err, models.ErrUserInAnotherTeam) {
+			response.Error(w, models.ErrUserInAnotherTeam, http.StatusBadRequest)
+			return
+		}
 		response.Error(w, err, http.StatusInternalServerError)
 		return
 	}

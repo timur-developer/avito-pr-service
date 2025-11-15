@@ -35,8 +35,8 @@ func New(cfg config.Config) (*Server, error) {
 	userRepository := store.User()
 	prRepository := store.PR()
 
-	teamUC := usecase.NewTeamUsecase(teamRepository, log)
 	userUC := usecase.NewUserUsecase(userRepository, log)
+	teamUC := usecase.NewTeamUsecase(teamRepository, userRepository, log)
 	prUC := usecase.NewPRUsecase(prRepository, userRepository, teamRepository, log)
 
 	teamHandler := handler.NewTeamHandler(teamUC, log)

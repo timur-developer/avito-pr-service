@@ -32,7 +32,7 @@ var (
 	ErrTeamExists   = AppError{Code: ErrorTeamExists, Message: "team already exists"}
 	ErrTeamNotFound = AppError{Code: ErrorNotFound, Message: "team not found"}
 	ErrUserNotFound = AppError{Code: ErrorNotFound, Message: "user not found"}
-	ErrNotFound     = AppError{Code: ErrorNotFound, Message: "team not found"}
+	ErrNotFound     = AppError{Code: ErrorNotFound, Message: "not found"}
 	ErrPRExists     = AppError{Code: ErrorPRExists, Message: "pull request already exists"}
 	ErrNotAssigned  = AppError{Code: ErrorNotAssigned, Message: "not assigned"}
 	ErrNoCandidate  = AppError{Code: ErrorNoCandidate, Message: "no candidate"}

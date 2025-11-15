@@ -2,7 +2,6 @@ package models
 
 import "time"
 
-// Полная инфа по PR
 type PullRequest struct {
 	ID                string     `json:"pull_request_id"`
 	Name              string     `json:"pull_request_name"`
@@ -13,10 +12,8 @@ type PullRequest struct {
 	MergedAt          *time.Time `json:"mergedAt,omitempty"`
 }
 
-// Сокращенная инфа по PR для ручки получения информации о PR
-type PullRequestShort struct {
-	ID       string `json:"pull_request_id"`
-	Name     string `json:"pull_request_name"`
-	AuthorID string `json:"author_id"`
-	Status   string `json:"status"`
+type CreatePRRequest struct {
+	ID       string `json:"pull_request_id" validate:"required"`
+	Name     string `json:"pull_request_name" validate:"required,min=1"`
+	AuthorID string `json:"author_id" validate:"required"`
 }

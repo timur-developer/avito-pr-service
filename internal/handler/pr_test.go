@@ -40,6 +40,12 @@ func (m *mockPRUsecase) GetPR(ctx context.Context, prID string) (models.PullRequ
 	args := m.Called(ctx, prID)
 	return args.Get(0).(models.PullRequest), args.Error(1)
 }
+
+func (m *mockPRUsecase) GetUserStats(ctx context.Context) ([]models.UserStats, error) {
+	args := m.Called(ctx)
+	return args.Get(0).([]models.UserStats), args.Error(1)
+}
+
 func TestPRHandler_CreatePR_Success(t *testing.T) {
 	uc := new(mockPRUsecase)
 	h := NewPRHandler(uc, testLogger())

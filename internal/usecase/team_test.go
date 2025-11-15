@@ -6,8 +6,6 @@ import (
 	"errors"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"io"
-	"log/slog"
 	"testing"
 )
 
@@ -22,17 +20,15 @@ func (m *mockTeamRepository) GetTeam(ctx context.Context, name string) (models.T
 	return args.Get(0).(models.Team), args.Error(1)
 }
 
-func testLogger() *slog.Logger {
-	return slog.New(slog.NewTextHandler(io.Discard, nil))
-}
-
 func TestTeamUsecase_AddTeam_AlreadyExists(t *testing.T) {
-	teamRepo := new(mockTeamRepository)
+	repo := new(mockTeamRepository)
 	userRepo := new(mockUserRepository)
+	prRepo := new(mockPRRepository)
+	prUC := new(mockPRUsecase)
 
-	uc := NewTeamUsecase(teamRepo, userRepo, testLogger())
+	uc := NewTeamUsecase(repo, userRepo, prRepo, prUC, testLogger())
 
-	teamRepo.On("GetTeam", mock.Anything, "avito").Return(models.Team{}, nil)
+	repo.On("GetTeam", mock.Anything, "avito").Return(models.Team{}, nil)
 
 	err := uc.AddTeam(context.Background(), models.Team{Name: "avito"})
 	var appErr models.AppError
@@ -40,60 +36,59 @@ func TestTeamUsecase_AddTeam_AlreadyExists(t *testing.T) {
 	require.Equal(t, models.ErrorTeamExists, appErr.Code)
 	require.Equal(t, "team already exists", appErr.Message)
 
-	teamRepo.AssertExpectations(t)
-	userRepo.AssertExpectations(t)
+	repo.AssertExpectations(t)
 }
 
 func TestTeamUsecase_AddTeam_Success(t *testing.T) {
-	teamRepo := new(mockTeamRepository)
+	repo := new(mockTeamRepository)
 	userRepo := new(mockUserRepository)
+	prRepo := new(mockPRRepository)
+	prUC := new(mockPRUsecase)
 
-	uc := NewTeamUsecase(teamRepo, userRepo, testLogger())
+	uc := NewTeamUsecase(repo, userRepo, prRepo, prUC, testLogger())
 
-	teamRepo.On("GetTeam", mock.Anything, "new-team").Return(models.Team{}, models.ErrTeamNotFound)
-	teamRepo.On("CreateTeam", mock.Anything, mock.Anything).Return(nil)
+	repo.On("GetTeam", mock.Anything, "new-team").Return(models.Team{}, models.ErrTeamNotFound)
+	repo.On("CreateTeam", mock.Anything, mock.Anything).Return(nil)
 
 	err := uc.AddTeam(context.Background(), models.Team{Name: "new-team"})
 	require.NoError(t, err)
 
-	teamRepo.AssertExpectations(t)
-	userRepo.AssertExpectations(t)
+	repo.AssertExpectations(t)
 }
 
 func TestTeamUsecase_GetTeam_NotFound(t *testing.T) {
-	teamRepo := new(mockTeamRepository)
+	repo := new(mockTeamRepository)
 	userRepo := new(mockUserRepository)
+	prRepo := new(mockPRRepository)
+	prUC := new(mockPRUsecase)
 
-	uc := NewTeamUsecase(teamRepo, userRepo, testLogger())
+	uc := NewTeamUsecase(repo, userRepo, prRepo, prUC, testLogger())
 
-	teamRepo.On("GetTeam", mock.Anything, "unknown").Return(models.Team{}, models.ErrTeamNotFound)
+	repo.On("GetTeam", mock.Anything, "unknown").Return(models.Team{}, models.ErrTeamNotFound)
 
 	_, err := uc.GetTeam(context.Background(), "unknown")
 	var appErr models.AppError
 	require.True(t, errors.As(err, &appErr))
 	require.Equal(t, models.ErrorNotFound, appErr.Code)
 
-	teamRepo.AssertExpectations(t)
-	userRepo.AssertExpectations(t)
+	repo.AssertExpectations(t)
 }
 
 func TestTeamUsecase_GetTeam_Success(t *testing.T) {
-	teamRepo := new(mockTeamRepository)
+	repo := new(mockTeamRepository)
 	userRepo := new(mockUserRepository)
+	prRepo := new(mockPRRepository)
+	prUC := new(mockPRUsecase)
 
-	uc := NewTeamUsecase(teamRepo, userRepo, testLogger())
+	uc := NewTeamUsecase(repo, userRepo, prRepo, prUC, testLogger())
 
-	expected := models.Team{
-		Name:    "avito",
-		Members: []models.TeamMember{{UserID: "u1"}},
-	}
-	teamRepo.On("GetTeam", mock.Anything, "avito").Return(expected, nil)
+	expected := models.Team{Name: "avito", Members: []models.TeamMember{{UserID: "u1"}}}
+	repo.On("GetTeam", mock.Anything, "avito").Return(expected, nil)
 
 	got, err := uc.GetTeam(context.Background(), "avito")
 	require.NoError(t, err)
 	require.Equal(t, expected.Name, got.Name)
 	require.Len(t, got.Members, 1)
 
-	teamRepo.AssertExpectations(t)
-	userRepo.AssertExpectations(t)
+	repo.AssertExpectations(t)
 }

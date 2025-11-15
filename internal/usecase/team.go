@@ -11,18 +11,23 @@ import (
 type TeamUsecase interface {
 	AddTeam(ctx context.Context, team models.Team) error
 	GetTeam(ctx context.Context, name string) (models.Team, error)
+	DeactivateTeam(ctx context.Context, req models.DeactivateTeamRequest) (models.DeactivateTeamResponse, error)
 }
 
 type teamUsecase struct {
 	repo     repository.TeamRepository
 	userRepo repository.UserRepository
+	prRepo   repository.PRRepository
+	prUC     PRUsecase
 	log      *slog.Logger
 }
 
-func NewTeamUsecase(repo repository.TeamRepository, userRepo repository.UserRepository, log *slog.Logger) TeamUsecase {
+func NewTeamUsecase(repo repository.TeamRepository, userRepo repository.UserRepository, prRepo repository.PRRepository, prUC PRUsecase, log *slog.Logger) TeamUsecase {
 	return &teamUsecase{
 		repo:     repo,
 		userRepo: userRepo,
+		prRepo:   prRepo,
+		prUC:     prUC,
 		log:      log.With("layer", "usecase", "entity", "team"),
 	}
 }
@@ -66,4 +71,45 @@ func (u *teamUsecase) GetTeam(ctx context.Context, name string) (models.Team, er
 		return team, models.ErrTeamNotFound
 	}
 	return team, err
+}
+
+func (u *teamUsecase) DeactivateTeam(ctx context.Context, req models.DeactivateTeamRequest) (models.DeactivateTeamResponse, error) {
+	resp := models.DeactivateTeamResponse{}
+
+	prs, err := u.prRepo.GetOpenPRsWithTeamReviewers(ctx, req.TeamName)
+	if err != nil {
+		u.log.Error("failed to get PRs", "error", err)
+		return resp, err
+	}
+
+	for _, pr := range prs {
+		for _, reviewerID := range pr.AssignedReviewers {
+			user, err := u.userRepo.GetUser(ctx, reviewerID)
+			if err != nil || user.TeamName != req.TeamName {
+				continue
+			}
+
+			reassignReq := models.ReassignRequest{
+				PRID:          pr.ID,
+				OldReviewerID: reviewerID,
+			}
+
+			_, _, err = u.prUC.ReassignReviewer(ctx, reassignReq)
+			if err == nil {
+				resp.ReassignedPRs++
+			} else if !errors.Is(err, models.ErrNoCandidate) {
+				u.log.Warn("failed to reassign", "pr", pr.ID, "old", reviewerID, "error", err)
+			}
+		}
+	}
+
+	deactivated, err := u.userRepo.DeactivateTeam(ctx, req.TeamName)
+	if err != nil {
+		u.log.Error("failed to deactivate team", "team", req.TeamName, "error", err)
+		return resp, err
+	}
+	resp.DeactivatedUsers = deactivated
+
+	u.log.Info("team deactivated", "team", req.TeamName, "users", deactivated, "reassigned", resp.ReassignedPRs)
+	return resp, nil
 }

@@ -10,3 +10,12 @@ type TeamMember struct {
 	Username string `json:"username" validate:"required"`
 	IsActive bool   `json:"is_active"`
 }
+
+type DeactivateTeamRequest struct {
+	TeamName string `json:"team_name" validate:"required"`
+}
+
+type DeactivateTeamResponse struct {
+	DeactivatedUsers int `json:"deactivated_users"`
+	ReassignedPRs    int `json:"reassigned_prs"`
+}

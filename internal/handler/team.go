@@ -25,6 +25,7 @@ func NewTeamHandler(uc usecase.TeamUsecase, log *slog.Logger) *TeamHandler {
 func (h *TeamHandler) Register(r chi.Router) {
 	r.Post("/team/add", h.AddTeam)
 	r.Get("/team/get", h.GetTeam)
+	r.Post("/team/deactivate", h.DeactivateTeam)
 }
 
 func (h *TeamHandler) AddTeam(w http.ResponseWriter, r *http.Request) {
@@ -76,4 +77,24 @@ func (h *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.JSON(w, team, http.StatusOK)
+}
+
+func (h *TeamHandler) DeactivateTeam(w http.ResponseWriter, r *http.Request) {
+	var req models.DeactivateTeamRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.BadRequest(w, "invalid JSON")
+		return
+	}
+	if err := models.Validate(&req); err != nil {
+		response.ValidationError(w, err)
+		return
+	}
+
+	resp, err := h.uc.DeactivateTeam(r.Context(), req)
+	if err != nil {
+		response.Error(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	response.JSON(w, map[string]any{"deactivate": resp}, http.StatusOK)
 }

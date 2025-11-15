@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"io"
 	"log/slog"
@@ -16,6 +17,7 @@ import (
 
 type mockTeamUsecase struct {
 	teams map[string]models.Team
+	mock.Mock
 }
 
 func (m *mockTeamUsecase) AddTeam(ctx context.Context, team models.Team) error {
@@ -45,6 +47,34 @@ func (m *mockTeamUsecase) GetTeam(ctx context.Context, name string) (models.Team
 		return models.Team{}, models.ErrTeamNotFound
 	}
 	return team, nil
+}
+func (m *mockTeamUsecase) DeactivateTeam(ctx context.Context, req models.DeactivateTeamRequest) (models.DeactivateTeamResponse, error) {
+	args := m.Called(ctx, req)
+
+	team, exists := m.teams[req.TeamName]
+	if !exists {
+		return models.DeactivateTeamResponse{}, models.ErrTeamNotFound
+	}
+
+	deactivated := 0
+	for i := range team.Members {
+		if team.Members[i].IsActive {
+			team.Members[i].IsActive = false
+			deactivated++
+		}
+	}
+	m.teams[req.TeamName] = team
+
+	resp := models.DeactivateTeamResponse{
+		DeactivatedUsers: deactivated,
+		ReassignedPRs:    0,
+	}
+
+	if args.Get(0) != nil {
+		return args.Get(0).(models.DeactivateTeamResponse), args.Error(1)
+	}
+
+	return resp, nil
 }
 
 func testLogger() *slog.Logger {
@@ -114,4 +144,42 @@ func TestTeamHandler_AddTeam_Validation_Fail(t *testing.T) {
 	errMap := resp["error"].(map[string]any)
 	require.Contains(t, errMap["message"].(string), "name is required")
 	require.Contains(t, errMap["message"].(string), "members is required")
+}
+
+func TestTeamHandler_DeactivateTeam_Success(t *testing.T) {
+	uc := &mockTeamUsecase{teams: make(map[string]models.Team)}
+	h := NewTeamHandler(uc, testLogger())
+	r := chi.NewRouter()
+	h.Register(r)
+
+	team := models.Team{
+		Name: "backend",
+		Members: []models.TeamMember{
+			{UserID: "u1", Username: "alice", IsActive: true},
+		},
+	}
+	uc.teams["backend"] = team
+
+	resp := models.DeactivateTeamResponse{
+		DeactivatedUsers: 1,
+		ReassignedPRs:    0,
+	}
+	uc.On("DeactivateTeam", mock.Anything, models.DeactivateTeamRequest{TeamName: "backend"}).
+		Return(resp, nil)
+
+	body := `{"team_name":"backend"}`
+	req := httptest.NewRequest(http.MethodPost, "/team/deactivate", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var response struct {
+		Deactivate models.DeactivateTeamResponse `json:"deactivate"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	require.Equal(t, 1, response.Deactivate.DeactivatedUsers)
+	require.Equal(t, 0, response.Deactivate.ReassignedPRs)
+
+	uc.AssertExpectations(t)
 }

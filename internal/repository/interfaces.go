@@ -13,6 +13,7 @@ type TeamRepository interface {
 type UserRepository interface {
 	SetActive(ctx context.Context, userID string, isActive bool) error
 	GetUser(ctx context.Context, userID string) (models.User, error)
+	DeactivateTeam(ctx context.Context, teamName string) (int, error)
 }
 
 type PRRepository interface {
@@ -22,4 +23,5 @@ type PRRepository interface {
 	ReassignReviewer(ctx context.Context, prID, oldUID, newUID string) error
 	GetPRsByReviewer(ctx context.Context, userID string) ([]models.PullRequest, error)
 	GetUserStats(ctx context.Context) ([]models.UserStats, error)
+	GetOpenPRsWithTeamReviewers(ctx context.Context, teamName string) ([]models.PullRequest, error)
 }

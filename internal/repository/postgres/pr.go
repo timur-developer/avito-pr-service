@@ -205,3 +205,37 @@ func (r *prRepository) GetUserStats(ctx context.Context) ([]models.UserStats, er
 	}
 	return stats, nil
 }
+
+func (r *prRepository) GetOpenPRsWithTeamReviewers(ctx context.Context, teamName string) ([]models.PullRequest, error) {
+	prIDRows, err := r.db.Query(ctx, `
+        SELECT DISTINCT p.id
+        FROM pull_requests p
+        JOIN pr_reviewers pr ON p.id = pr.pr_id
+        JOIN users u ON pr.user_id = u.user_id
+        WHERE u.team_name = $1 AND p.status = 'OPEN'
+    `, teamName)
+	if err != nil {
+		return nil, err
+	}
+	defer prIDRows.Close()
+
+	var prIDs []string
+	for prIDRows.Next() {
+		var id string
+		if err := prIDRows.Scan(&id); err != nil {
+			return nil, err
+		}
+		prIDs = append(prIDs, id)
+	}
+
+	var prs []models.PullRequest
+	for _, prID := range prIDs {
+		pr, err := r.GetPR(ctx, prID)
+		if err != nil {
+			return nil, err
+		}
+		prs = append(prs, pr)
+	}
+
+	return prs, nil
+}

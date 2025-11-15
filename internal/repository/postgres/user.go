@@ -48,3 +48,15 @@ func (r *userRepository) GetUser(ctx context.Context, userID string) (models.Use
 	}
 	return u, nil
 }
+
+func (r *userRepository) DeactivateTeam(ctx context.Context, teamName string) (int, error) {
+	cmd, err := r.db.Exec(ctx, `
+        UPDATE users 
+        SET is_active = false 
+        WHERE team_name = $1 AND is_active = true
+    `, teamName)
+	if err != nil {
+		return 0, err
+	}
+	return int(cmd.RowsAffected()), nil
+}

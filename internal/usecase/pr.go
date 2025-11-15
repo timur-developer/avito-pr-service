@@ -7,11 +7,16 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"slices"
 	"time"
 )
 
 type PRUsecase interface {
 	CreatePR(ctx context.Context, req models.CreatePRRequest) (models.PullRequest, error)
+	GetPR(ctx context.Context, prID string) (models.PullRequest, error)
+	MergePR(ctx context.Context, prID string) (models.PullRequest, error)
+	ReassignReviewer(ctx context.Context, req models.ReassignRequest) (models.PullRequest, string, error)
+	GetPRsByReviewer(ctx context.Context, userID string) ([]models.PullRequest, error)
 }
 
 type prUsecase struct {
@@ -57,7 +62,7 @@ func (u *prUsecase) CreatePR(ctx context.Context, req models.CreatePRRequest) (m
 		ID:                req.ID,
 		Name:              req.Name,
 		AuthorID:          req.AuthorID,
-		Status:            "OPEN",
+		Status:            models.StatusOpen,
 		AssignedReviewers: reviewers,
 		CreatedAt:         utils.Ptr(time.Now()),
 	}
@@ -67,4 +72,92 @@ func (u *prUsecase) CreatePR(ctx context.Context, req models.CreatePRRequest) (m
 	}
 
 	return pr, nil
+}
+
+func (u *prUsecase) GetPR(ctx context.Context, prID string) (models.PullRequest, error) {
+	return u.prRepo.GetPR(ctx, prID)
+}
+
+func (u *prUsecase) MergePR(ctx context.Context, prID string) (models.PullRequest, error) {
+	pr, err := u.prRepo.GetPR(ctx, prID)
+	if err != nil {
+		if errors.Is(err, models.ErrNotFound) {
+			return models.PullRequest{}, models.ErrPRNotFound
+		}
+		return models.PullRequest{}, err
+	}
+
+	if pr.Status == models.StatusMerged {
+		return pr, nil
+	}
+	if pr.Status != models.StatusOpen {
+		return models.PullRequest{}, models.ErrInvalidStatus
+	}
+
+	if err := u.prRepo.MergePR(ctx, prID); err != nil {
+		return models.PullRequest{}, err
+	}
+
+	pr.Status = models.StatusMerged
+	pr.MergedAt = utils.Ptr(time.Now())
+	return pr, nil
+}
+
+func (u *prUsecase) ReassignReviewer(ctx context.Context, req models.ReassignRequest) (models.PullRequest, string, error) {
+	pr, err := u.prRepo.GetPR(ctx, req.PRID)
+	if err != nil {
+		return models.PullRequest{}, "", err
+	}
+	if pr.Status != models.StatusOpen {
+		return models.PullRequest{}, "", models.ErrPRMerged
+	}
+
+	if !slices.Contains(pr.AssignedReviewers, req.OldReviewerID) {
+		return models.PullRequest{}, "", models.ErrNotAssigned
+	}
+
+	oldUser, err := u.userRepo.GetUser(ctx, req.OldReviewerID)
+	if err != nil {
+		return models.PullRequest{}, "", err
+	}
+
+	team, err := u.teamRepo.GetTeam(ctx, oldUser.TeamName)
+	if err != nil {
+		return models.PullRequest{}, "", err
+	}
+
+	candidates := []string{}
+	for _, m := range team.Members {
+		if m.UserID == pr.AuthorID {
+			continue
+		}
+		if m.UserID != req.OldReviewerID && m.IsActive && !slices.Contains(pr.AssignedReviewers, m.UserID) {
+			candidates = append(candidates, m.UserID)
+		}
+	}
+	if len(candidates) == 0 {
+		return models.PullRequest{}, "", models.ErrNoCandidate
+	}
+
+	newUID := utils.PickRandom(candidates, 1)[0]
+	if err := u.prRepo.ReassignReviewer(ctx, req.PRID, req.OldReviewerID, newUID); err != nil {
+		return models.PullRequest{}, "", err
+	}
+
+	pr.AssignedReviewers = replaceReviewer(pr.AssignedReviewers, req.OldReviewerID, newUID)
+	return pr, newUID, nil
+}
+
+func (u *prUsecase) GetPRsByReviewer(ctx context.Context, userID string) ([]models.PullRequest, error) {
+	return u.prRepo.GetPRsByReviewer(ctx, userID)
+}
+
+func replaceReviewer(reviewers []string, old, new string) []string {
+	for i, r := range reviewers {
+		if r == old {
+			reviewers[i] = new
+			return reviewers
+		}
+	}
+	return reviewers
 }

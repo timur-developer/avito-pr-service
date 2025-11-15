@@ -21,4 +21,5 @@ type PRRepository interface {
 	MergePR(ctx context.Context, prID string) error
 	ReassignReviewer(ctx context.Context, prID, oldUID, newUID string) error
 	GetPRsByReviewer(ctx context.Context, userID string) ([]models.PullRequest, error)
+	GetUserStats(ctx context.Context) ([]models.UserStats, error)
 }

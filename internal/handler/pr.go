@@ -26,6 +26,7 @@ func (h *PRHandler) Register(r chi.Router) {
 	r.Post("/pullRequest/merge", h.MergePR)
 	r.Post("/pullRequest/reassign", h.ReassignReviewer)
 	r.Get("/users/getReview", h.GetPRsByReviewer)
+	r.Get("/stats/users", h.GetUserStats)
 }
 
 func (h *PRHandler) CreatePR(w http.ResponseWriter, r *http.Request) {
@@ -104,4 +105,13 @@ func (h *PRHandler) GetPRsByReviewer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response.JSON(w, map[string]any{"pull_requests": prs}, http.StatusOK)
+}
+
+func (h *PRHandler) GetUserStats(w http.ResponseWriter, r *http.Request) {
+	stats, err := h.uc.GetUserStats(r.Context())
+	if err != nil {
+		response.Error(w, err, http.StatusInternalServerError)
+		return
+	}
+	response.JSON(w, map[string]any{"stats": stats}, http.StatusOK)
 }

@@ -17,6 +17,7 @@ type PRUsecase interface {
 	MergePR(ctx context.Context, prID string) (models.PullRequest, error)
 	ReassignReviewer(ctx context.Context, req models.ReassignRequest) (models.PullRequest, string, error)
 	GetPRsByReviewer(ctx context.Context, userID string) ([]models.PullRequest, error)
+	GetUserStats(ctx context.Context) ([]models.UserStats, error)
 }
 
 type prUsecase struct {
@@ -160,4 +161,8 @@ func replaceReviewer(reviewers []string, old, new string) []string {
 		}
 	}
 	return reviewers
+}
+
+func (u *prUsecase) GetUserStats(ctx context.Context) ([]models.UserStats, error) {
+	return u.prRepo.GetUserStats(ctx)
 }

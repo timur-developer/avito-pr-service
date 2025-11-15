@@ -174,3 +174,34 @@ func (r *prRepository) GetPRsByReviewer(ctx context.Context, userID string) ([]m
 
 	return prs, nil
 }
+
+func (r *prRepository) GetUserStats(ctx context.Context) ([]models.UserStats, error) {
+	rows, err := r.db.Query(ctx, `
+        SELECT 
+            u.user_id, 
+            u.team_name, 
+            u.username, 
+            COUNT(pr.pr_id) as count,
+            COALESCE(array_agg(pr.pr_id) FILTER (WHERE pr.pr_id IS NOT NULL), '{}') as pr_ids
+        FROM users u
+        LEFT JOIN pr_reviewers pr ON u.user_id = pr.user_id
+        GROUP BY u.user_id
+        ORDER BY count DESC
+    `)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var stats []models.UserStats
+	for rows.Next() {
+		var s models.UserStats
+		var prIDs []string
+		if err := rows.Scan(&s.UserID, &s.TeamName, &s.Username, &s.AssignmentCount, &prIDs); err != nil {
+			return nil, err
+		}
+		s.AssignedPRs = prIDs
+		stats = append(stats, s)
+	}
+	return stats, nil
+}

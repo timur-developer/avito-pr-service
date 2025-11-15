@@ -14,3 +14,7 @@ type UserRepository interface {
 	SetActive(ctx context.Context, userID string, isActive bool) error
 	GetUser(ctx context.Context, userID string) (models.User, error)
 }
+
+type PRRepository interface {
+	CreatePR(ctx context.Context, pr models.PullRequest) error
+}

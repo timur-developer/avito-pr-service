@@ -58,14 +58,14 @@ func ValidationError(w http.ResponseWriter, err error) {
 
 	messages := make([]string, 0, len(validationErrors))
 	for _, e := range validationErrors {
-		jsonField := fieldToJSON(e.StructField())
+		field := e.Field()
 		switch e.Tag() {
 		case "required":
-			messages = append(messages, fmt.Sprintf("%s is required", jsonField))
+			messages = append(messages, fmt.Sprintf("%s is required", field))
 		case "min":
-			messages = append(messages, fmt.Sprintf("%s must be at least %s characters", jsonField, e.Param()))
+			messages = append(messages, fmt.Sprintf("%s must be at least %s characters", field, e.Param()))
 		default:
-			messages = append(messages, fmt.Sprintf("%s is invalid", jsonField))
+			messages = append(messages, fmt.Sprintf("%s is invalid", field))
 		}
 	}
 
@@ -75,19 +75,6 @@ func ValidationError(w http.ResponseWriter, err error) {
 			"message": strings.Join(messages, ", "),
 		},
 	}, http.StatusBadRequest)
-}
-
-func fieldToJSON(goField string) string {
-	switch goField {
-	case "UserID":
-		return "user_id"
-	case "Name":
-		return "team_name"
-	case "Members":
-		return "members"
-	default:
-		return strings.ToLower(goField)
-	}
 }
 
 func BadRequest(w http.ResponseWriter, message string) {

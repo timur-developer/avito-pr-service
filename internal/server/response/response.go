@@ -21,16 +21,10 @@ func Error(w http.ResponseWriter, err error, defaultStatus int) {
 	if errors.As(err, &appErr) {
 		status := defaultStatus
 		switch appErr.Code {
-		case models.ErrorTeamExists, models.ErrorPRExists:
+		case models.ErrorTeamExists, models.ErrorPRExists, models.ErrorPRMerged, models.ErrorNoCandidate, models.ErrorNotAssigned:
 			status = http.StatusConflict
 		case models.ErrorNotFound:
 			status = http.StatusNotFound
-		case models.ErrorNoCandidate:
-			status = http.StatusNotFound
-		case models.ErrorNotAssigned:
-			status = http.StatusBadRequest
-		case models.ErrorPRMerged:
-			status = http.StatusConflict
 		}
 		JSON(w, map[string]any{
 			"error": map[string]string{

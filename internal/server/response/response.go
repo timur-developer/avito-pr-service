@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-playground/validator/v10"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -13,7 +14,9 @@ import (
 func JSON(w http.ResponseWriter, data any, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		log.Printf("failed to encode JSON: %v", err)
+	}
 }
 
 func Error(w http.ResponseWriter, err error, defaultStatus int) {

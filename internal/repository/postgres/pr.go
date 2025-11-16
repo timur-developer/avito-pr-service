@@ -90,7 +90,8 @@ func (r *prRepository) MergePR(ctx context.Context, prID string) (*time.Time, er
 
 	var status string
 	err = tx.QueryRow(ctx, `SELECT status FROM pull_requests WHERE id = $1 FOR UPDATE`, prID).Scan(&status)
-	if err != nil { /* ... */
+	if err != nil {
+		return nil, fmt.Errorf("scanning PR after merge: %w", err)
 	}
 
 	if status == "MERGED" {
@@ -142,13 +143,13 @@ func (r *prRepository) ReassignReviewer(ctx context.Context, prID, oldUID, newUI
 	defer rows.Close()
 	for rows.Next() {
 		var uid string
-		if err := rows.Scan(&uid); err != nil {
-			return err
+		if rowsErr := rows.Scan(&uid); rowsErr != nil {
+			return rowsErr
 		}
 		currentReviewers = append(currentReviewers, uid)
 	}
-	if err := rows.Err(); err != nil {
-		return err
+	if rowsErr := rows.Err(); rowsErr != nil {
+		return rowsErr
 	}
 
 	if !slices.Contains(currentReviewers, oldUID) {

@@ -96,8 +96,8 @@ func (u *teamUsecase) DeactivateTeam(ctx context.Context, req models.DeactivateT
 
 	for _, pr := range prs {
 		for _, reviewerID := range pr.AssignedReviewers {
-			user, err := u.userRepo.GetUser(ctx, reviewerID)
-			if err != nil || user.TeamName != req.TeamName {
+			user, getErr := u.userRepo.GetUser(ctx, reviewerID)
+			if getErr != nil || user.TeamName != req.TeamName {
 				continue
 			}
 

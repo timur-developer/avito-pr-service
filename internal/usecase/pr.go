@@ -145,8 +145,8 @@ func (u *prUsecase) ReassignReviewer(ctx context.Context, req models.ReassignReq
 
 	newUID := utils.PickRandom(candidates, 1)[0]
 
-	if err := u.prRepo.ReassignReviewer(ctx, req.PRID, req.OldReviewerID, newUID); err != nil {
-		return models.PullRequest{}, "", err
+	if reassignErr := u.prRepo.ReassignReviewer(ctx, req.PRID, req.OldReviewerID, newUID); reassignErr != nil {
+		return models.PullRequest{}, "", reassignErr
 	}
 
 	freshPR, err := u.prRepo.GetPR(ctx, req.PRID)

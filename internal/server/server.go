@@ -8,6 +8,7 @@ import (
 	"context"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/rs/cors"
 	"log/slog"
 	"net/http"
 	"os"
@@ -44,6 +45,14 @@ func New(cfg config.Config) (*Server, error) {
 	prHandler := handler.NewPRHandler(prUC, log)
 
 	r := chi.NewRouter()
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"}, // Для теста; в прод — укажи домен Swagger
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	})
+	r.Use(c.Handler)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 

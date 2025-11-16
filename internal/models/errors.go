@@ -6,7 +6,7 @@ const (
 	ErrorTeamExists        ErrorCode = "TEAM_EXISTS"
 	ErrorPRExists          ErrorCode = "PR_EXISTS"
 	ErrorPRMerged          ErrorCode = "PR_MERGED"
-	ErrorUserNotAssigned   ErrorCode = "USER_NOT_ASSIGNED"
+	ErrorNotAssigned       ErrorCode = "NOT_ASSIGNED"
 	ErrorNoCandidate       ErrorCode = "NO_CANDIDATE"
 	ErrorNotFound          ErrorCode = "NOT_FOUND"
 	ErrorInvalidStatus     ErrorCode = "INVALID_STATUS"
@@ -42,7 +42,7 @@ var (
 	ErrUserNotFound      = AppError{Code: ErrorNotFound, Message: "user not found"}
 	ErrNotFound          = AppError{Code: ErrorNotFound, Message: "not found"}
 	ErrPRExists          = AppError{Code: ErrorPRExists, Message: "pull request already exists"}
-	ErrUserNotAssigned   = AppError{Code: ErrorUserNotAssigned, Message: "user not assigned"}
+	ErrNotAssigned       = AppError{Code: ErrorNotAssigned, Message: "not assigned"}
 	ErrNoCandidate       = AppError{Code: ErrorNoCandidate, Message: "no candidate"}
 	ErrPRMerged          = AppError{Code: ErrorPRMerged, Message: "pull request already merged"}
 	ErrInvalidStatus     = AppError{Code: ErrorInvalidStatus, Message: "invalid pull request status"}

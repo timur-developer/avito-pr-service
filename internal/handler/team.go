@@ -49,6 +49,9 @@ func (h *TeamHandler) AddTeam(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, models.ErrUserInAnotherTeam) {
 			response.Error(w, models.ErrUserInAnotherTeam, http.StatusBadRequest)
 			return
+		} else if errors.Is(err, models.ErrEmptyTeam) {
+			response.Error(w, models.ErrEmptyTeam, http.StatusBadRequest)
+			return
 		}
 		response.Error(w, err, http.StatusInternalServerError)
 		return

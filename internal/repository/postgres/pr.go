@@ -57,7 +57,7 @@ func (r *prRepository) GetPR(ctx context.Context, prID string) (models.PullReque
     `, prID).Scan(&pr.ID, &pr.Name, &pr.AuthorID, &pr.Status, &pr.CreatedAt, &pr.MergedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.PullRequest{}, models.ErrNotFound
+			return models.PullRequest{}, models.ErrPRNotFound
 		}
 		return models.PullRequest{}, err
 	}

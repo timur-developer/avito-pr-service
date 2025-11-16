@@ -41,6 +41,10 @@ func (u *teamUsecase) AddTeam(ctx context.Context, team models.Team) error {
 		seen[m.UserID] = true
 	}
 
+	if len(team.Members) == 0 {
+		return models.ErrEmptyTeam
+	}
+
 	for _, m := range team.Members {
 		user, err := u.userRepo.GetUser(ctx, m.UserID)
 		if err == nil && user.TeamName != "" && user.TeamName != team.Name {
@@ -75,6 +79,14 @@ func (u *teamUsecase) GetTeam(ctx context.Context, name string) (models.Team, er
 
 func (u *teamUsecase) DeactivateTeam(ctx context.Context, req models.DeactivateTeamRequest) (models.DeactivateTeamResponse, error) {
 	resp := models.DeactivateTeamResponse{}
+
+	_, err := u.repo.GetTeam(ctx, req.TeamName)
+	if err != nil {
+		if errors.Is(err, models.ErrTeamNotFound) {
+			return resp, models.ErrTeamNotFound
+		}
+		return resp, err
+	}
 
 	prs, err := u.prRepo.GetOpenPRsWithTeamReviewers(ctx, req.TeamName)
 	if err != nil {

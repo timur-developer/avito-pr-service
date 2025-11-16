@@ -33,12 +33,13 @@ func (r *teamRepository) CreateTeam(ctx context.Context, team models.Team) error
 
 	for _, m := range team.Members {
 		_, err = tx.Exec(ctx, `
-			INSERT INTO users (user_id, username, team_name)
-    VALUES ($1, $2, $3)
+			INSERT INTO users (user_id, username, team_name, is_active)
+    VALUES ($1, $2, $3, $4)
     ON CONFLICT (user_id) DO UPDATE SET
         username = EXCLUDED.username,
-        team_name = EXCLUDED.team_name
-		`, m.UserID, m.Username, team.Name)
+        team_name = EXCLUDED.team_name,
+        is_active = EXCLUDED.is_active
+		`, m.UserID, m.Username, team.Name, m.IsActive)
 		if err != nil {
 			tx.Rollback(ctx)
 			return fmt.Errorf("upsert user %s: %w", m.UserID, err)

@@ -213,27 +213,75 @@ func TestPRUsecase_ReassignReviewer_NoCandidate(t *testing.T) {
 	teamRepo.AssertExpectations(t)
 }
 
-func TestPRUsecase_GetPRsByReviewer(t *testing.T) {
+func TestPRUsecase_GetPRsByReviewer_Success(t *testing.T) {
 	prRepo := new(mockPRRepository)
 	userRepo := new(mockUserRepository)
 	teamRepo := new(mockTeamRepository)
 
-	prs := []models.PullRequest{
-		{ID: "pr-1001", Name: "Fix", AuthorID: "u1", Status: models.StatusOpen},
+	existingUser := models.User{UserID: "u2", Username: "John Doe"}
+	expectedPRs := []models.PullRequest{
+		{ID: "pr-1001", Name: "Fix bug", AuthorID: "u1", Status: models.StatusOpen},
+		{ID: "pr-1002", Name: "Add feature", AuthorID: "u3", Status: models.StatusOpen},
 	}
 
-	prRepo.On("GetPRsByReviewer", mock.Anything, "u2").Return(prs, nil)
+	userRepo.On("GetUser", mock.Anything, "u2").Return(existingUser, nil)
+	prRepo.On("GetPRsByReviewer", mock.Anything, "u2").Return(expectedPRs, nil)
 
 	uc := NewPRUsecase(prRepo, userRepo, teamRepo, testLogger())
 
 	result, err := uc.GetPRsByReviewer(context.Background(), "u2")
 
 	require.NoError(t, err)
-	require.Len(t, result, 1)
+	require.Len(t, result, 2)
 	require.Equal(t, "pr-1001", result[0].ID)
+	require.Equal(t, "pr-1002", result[1].ID)
 
-	prRepo.AssertExpectations(t)
 	userRepo.AssertExpectations(t)
+	prRepo.AssertExpectations(t)
+	teamRepo.AssertExpectations(t)
+}
+
+func TestPRUsecase_GetPRsByReviewer_UserNotFound(t *testing.T) {
+	prRepo := new(mockPRRepository)
+	userRepo := new(mockUserRepository)
+	teamRepo := new(mockTeamRepository)
+
+	userRepo.On("GetUser", mock.Anything, "non-existent-user").Return(models.User{}, models.ErrNotFound)
+
+	uc := NewPRUsecase(prRepo, userRepo, teamRepo, testLogger())
+
+	result, err := uc.GetPRsByReviewer(context.Background(), "non-existent-user")
+
+	require.Error(t, err)
+	require.Nil(t, result)
+	require.ErrorIs(t, err, models.ErrUserNotFound)
+
+	userRepo.AssertExpectations(t)
+	prRepo.AssertExpectations(t)
+	teamRepo.AssertExpectations(t)
+}
+
+func TestPRUsecase_GetPRsByReviewer_NoPRs(t *testing.T) {
+	prRepo := new(mockPRRepository)
+	userRepo := new(mockUserRepository)
+	teamRepo := new(mockTeamRepository)
+
+	existingUser := models.User{UserID: "u3", Username: "Alice Smith"}
+	emptyPRs := []models.PullRequest{}
+
+	userRepo.On("GetUser", mock.Anything, "u3").Return(existingUser, nil)
+	prRepo.On("GetPRsByReviewer", mock.Anything, "u3").Return(emptyPRs, nil)
+
+	uc := NewPRUsecase(prRepo, userRepo, teamRepo, testLogger())
+
+	result, err := uc.GetPRsByReviewer(context.Background(), "u3")
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.Len(t, result, 0)
+
+	userRepo.AssertExpectations(t)
+	prRepo.AssertExpectations(t)
 	teamRepo.AssertExpectations(t)
 }
 

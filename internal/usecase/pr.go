@@ -6,6 +6,7 @@ import (
 	"avito-pr-service/internal/utils"
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"slices"
 	"time"
@@ -157,6 +158,14 @@ func (u *prUsecase) ReassignReviewer(ctx context.Context, req models.ReassignReq
 }
 
 func (u *prUsecase) GetPRsByReviewer(ctx context.Context, userID string) ([]models.PullRequest, error) {
+	_, err := u.userRepo.GetUser(ctx, userID)
+	if err != nil {
+		if errors.Is(err, models.ErrNotFound) {
+			return nil, models.ErrUserNotFound
+		}
+		return nil, fmt.Errorf("get user: %w", err)
+	}
+
 	return u.prRepo.GetPRsByReviewer(ctx, userID)
 }
 

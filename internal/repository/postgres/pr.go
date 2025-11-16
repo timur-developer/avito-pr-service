@@ -4,11 +4,13 @@ import (
 	"avito-pr-service/internal/models"
 	"avito-pr-service/internal/repository"
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"slices"
 	"time"
 )
 
@@ -120,19 +122,52 @@ func (r *prRepository) ReassignReviewer(ctx context.Context, prID, oldUID, newUI
 	}
 	defer tx.Rollback(ctx)
 
-	_, err = tx.Exec(ctx, `
-        DELETE FROM pr_reviewers 
-        WHERE pr_id = $1 AND user_id = $2
-    `, prID, oldUID)
+	var status string
+	err = tx.QueryRow(ctx, "SELECT status FROM pull_requests WHERE id = $1 FOR UPDATE", prID).Scan(&status)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return models.ErrNotFound
+		}
+		return err
+	}
+	if status != models.StatusOpen {
+		return models.ErrPRMerged
+	}
+
+	currentReviewers := []string{}
+	rows, err := tx.Query(ctx, "SELECT user_id FROM pr_reviewers WHERE pr_id = $1 FOR UPDATE", prID)
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
+	for rows.Next() {
+		var uid string
+		if err := rows.Scan(&uid); err != nil {
+			return err
+		}
+		currentReviewers = append(currentReviewers, uid)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
 
-	_, err = tx.Exec(ctx, `
-        INSERT INTO pr_reviewers (pr_id, user_id) 
-        VALUES ($1, $2)
-        ON CONFLICT (pr_id, user_id) DO NOTHING
-    `, prID, newUID)
+	if !slices.Contains(currentReviewers, oldUID) {
+		return models.ErrNotAssigned
+	}
+
+	if slices.Contains(currentReviewers, newUID) {
+		return models.ErrNoCandidate
+	}
+
+	res, err := tx.Exec(ctx, "DELETE FROM pr_reviewers WHERE pr_id = $1 AND user_id = $2", prID, oldUID)
+	if err != nil {
+		return err
+	}
+	if res.RowsAffected() != 1 {
+		return models.ErrNotAssigned
+	}
+
+	_, err = tx.Exec(ctx, "INSERT INTO pr_reviewers (pr_id, user_id) VALUES ($1, $2)", prID, newUID)
 	if err != nil {
 		return err
 	}

@@ -94,7 +94,7 @@ func TestPRUsecase_MergePR_Success(t *testing.T) {
 	userRepo := new(mockUserRepository)
 	teamRepo := new(mockTeamRepository)
 
-	mergedAt := time.Now().UTC().Truncate(time.Millisecond) // для стабильности
+	mergedAt := time.Now().UTC().Truncate(time.Millisecond)
 
 	pr := models.PullRequest{
 		ID:                "pr-1001",
@@ -161,6 +161,9 @@ func TestPRUsecase_ReassignReviewer_Success(t *testing.T) {
 		AssignedReviewers: []string{"u2"},
 	}
 
+	updatedPR := pr
+	updatedPR.AssignedReviewers = []string{"u3"}
+
 	oldUser := models.User{UserID: "u2", TeamName: "backend"}
 	team := models.Team{
 		Name: "backend",
@@ -174,12 +177,11 @@ func TestPRUsecase_ReassignReviewer_Success(t *testing.T) {
 	userRepo.On("GetUser", mock.Anything, "u2").Return(oldUser, nil)
 	teamRepo.On("GetTeam", mock.Anything, "backend").Return(team, nil)
 	prRepo.On("ReassignReviewer", mock.Anything, "pr-1001", "u2", "u3").Return(nil)
+	prRepo.On("GetPR", mock.Anything, "pr-1001").Return(updatedPR, nil).Once()
 
 	uc := NewPRUsecase(prRepo, userRepo, teamRepo, testLogger())
-
 	req := models.ReassignRequest{PRID: "pr-1001", OldReviewerID: "u2"}
 	newPR, replacedBy, err := uc.ReassignReviewer(context.Background(), req)
-
 	require.NoError(t, err)
 	require.Equal(t, "u3", replacedBy)
 	require.Contains(t, newPR.AssignedReviewers, "u3")
@@ -203,7 +205,6 @@ func TestPRUsecase_ReassignReviewer_NoCandidate(t *testing.T) {
 	teamRepo.On("GetTeam", mock.Anything, "backend").Return(team, nil)
 
 	uc := NewPRUsecase(prRepo, userRepo, teamRepo, testLogger())
-
 	_, _, err := uc.ReassignReviewer(context.Background(), models.ReassignRequest{PRID: "pr-1001", OldReviewerID: "u2"})
 	require.ErrorIs(t, err, models.ErrNoCandidate)
 
@@ -243,10 +244,13 @@ func TestPRUsecase_ReassignReviewer_AuthorNotCandidate(t *testing.T) {
 
 	pr := models.PullRequest{
 		ID:                "pr-1001",
-		Status:            "OPEN",
+		Status:            models.StatusOpen,
 		AuthorID:          "u1",
 		AssignedReviewers: []string{"u2"},
 	}
+
+	updatedPR := pr
+	updatedPR.AssignedReviewers = []string{"u3"}
 
 	oldUser := models.User{UserID: "u2", TeamName: "backend"}
 	team := models.Team{
@@ -258,16 +262,15 @@ func TestPRUsecase_ReassignReviewer_AuthorNotCandidate(t *testing.T) {
 		},
 	}
 
-	prRepo.On("GetPR", mock.Anything, "pr-1001").Return(pr, nil)
+	prRepo.On("GetPR", mock.Anything, "pr-1001").Return(pr, nil).Once()
 	userRepo.On("GetUser", mock.Anything, "u2").Return(oldUser, nil)
 	teamRepo.On("GetTeam", mock.Anything, "backend").Return(team, nil)
 	prRepo.On("ReassignReviewer", mock.Anything, "pr-1001", "u2", "u3").Return(nil)
+	prRepo.On("GetPR", mock.Anything, "pr-1001").Return(updatedPR, nil).Once()
 
 	uc := NewPRUsecase(prRepo, userRepo, teamRepo, testLogger())
-
 	req := models.ReassignRequest{PRID: "pr-1001", OldReviewerID: "u2"}
 	_, replacedBy, err := uc.ReassignReviewer(context.Background(), req)
-
 	require.NoError(t, err)
 	require.Equal(t, "u3", replacedBy)
 	require.NotEqual(t, "u1", replacedBy)
@@ -276,7 +279,6 @@ func TestPRUsecase_ReassignReviewer_AuthorNotCandidate(t *testing.T) {
 	userRepo.AssertExpectations(t)
 	teamRepo.AssertExpectations(t)
 }
-
 func TestPRUsecase_GetUserStats_Success(t *testing.T) {
 	prRepo := new(mockPRRepository)
 	userRepo := new(mockUserRepository)

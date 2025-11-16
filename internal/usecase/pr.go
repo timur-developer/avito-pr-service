@@ -110,10 +110,10 @@ func (u *prUsecase) ReassignReviewer(ctx context.Context, req models.ReassignReq
 	if err != nil {
 		return models.PullRequest{}, "", err
 	}
+
 	if pr.Status != models.StatusOpen {
 		return models.PullRequest{}, "", models.ErrPRMerged
 	}
-
 	if !slices.Contains(pr.AssignedReviewers, req.OldReviewerID) {
 		return models.PullRequest{}, "", models.ErrNotAssigned
 	}
@@ -133,40 +133,31 @@ func (u *prUsecase) ReassignReviewer(ctx context.Context, req models.ReassignReq
 		if m.UserID == pr.AuthorID {
 			continue
 		}
-		if m.UserID != req.OldReviewerID && m.IsActive {
+		if m.IsActive && !slices.Contains(pr.AssignedReviewers, m.UserID) {
 			candidates = append(candidates, m.UserID)
 		}
 	}
+
 	if len(candidates) == 0 {
 		return models.PullRequest{}, "", models.ErrNoCandidate
 	}
 
 	newUID := utils.PickRandom(candidates, 1)[0]
+
 	if err := u.prRepo.ReassignReviewer(ctx, req.PRID, req.OldReviewerID, newUID); err != nil {
 		return models.PullRequest{}, "", err
 	}
 
-	pr.AssignedReviewers = removeReviewer(pr.AssignedReviewers, req.OldReviewerID)
-	pr.AssignedReviewers = addReviewerIfNotExists(pr.AssignedReviewers, newUID)
+	freshPR, err := u.prRepo.GetPR(ctx, req.PRID)
+	if err != nil {
+		return models.PullRequest{}, "", err
+	}
 
-	return pr, newUID, nil
+	return freshPR, newUID, nil
 }
 
 func (u *prUsecase) GetPRsByReviewer(ctx context.Context, userID string) ([]models.PullRequest, error) {
 	return u.prRepo.GetPRsByReviewer(ctx, userID)
-}
-
-func removeReviewer(reviewers []string, uid string) []string {
-	return slices.DeleteFunc(reviewers, func(r string) bool {
-		return r == uid
-	})
-}
-
-func addReviewerIfNotExists(reviewers []string, uid string) []string {
-	if slices.Contains(reviewers, uid) {
-		return reviewers
-	}
-	return append(reviewers, uid)
 }
 
 func (u *prUsecase) GetUserStats(ctx context.Context) ([]models.UserStats, error) {

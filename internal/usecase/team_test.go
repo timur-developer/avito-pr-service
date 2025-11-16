@@ -24,7 +24,7 @@ func TestTeamUsecase_AddTeam_AlreadyExists(t *testing.T) {
 	repo := new(mockTeamRepository)
 	userRepo := new(mockUserRepository)
 	prRepo := new(mockPRRepository)
-	prUC := new(mockPRUsecase)
+	prUC := NewPRUsecase(prRepo, userRepo, repo, testLogger())
 
 	uc := NewTeamUsecase(repo, userRepo, prRepo, prUC, testLogger())
 
@@ -53,7 +53,7 @@ func TestTeamUsecase_AddTeam_Success(t *testing.T) {
 	repo := new(mockTeamRepository)
 	userRepo := new(mockUserRepository)
 	prRepo := new(mockPRRepository)
-	prUC := new(mockPRUsecase)
+	prUC := NewPRUsecase(prRepo, userRepo, repo, testLogger())
 
 	uc := NewTeamUsecase(repo, userRepo, prRepo, prUC, testLogger())
 
@@ -84,7 +84,7 @@ func TestTeamUsecase_AddTeam_EmptyMembers(t *testing.T) {
 	repo := new(mockTeamRepository)
 	userRepo := new(mockUserRepository)
 	prRepo := new(mockPRRepository)
-	prUC := new(mockPRUsecase)
+	prUC := NewPRUsecase(prRepo, userRepo, repo, testLogger())
 
 	uc := NewTeamUsecase(repo, userRepo, prRepo, prUC, testLogger())
 
@@ -103,7 +103,7 @@ func TestTeamUsecase_AddTeam_DuplicateUserID(t *testing.T) {
 	repo := new(mockTeamRepository)
 	userRepo := new(mockUserRepository)
 	prRepo := new(mockPRRepository)
-	prUC := new(mockPRUsecase)
+	prUC := NewPRUsecase(prRepo, userRepo, repo, testLogger())
 
 	uc := NewTeamUsecase(repo, userRepo, prRepo, prUC, testLogger())
 
@@ -125,7 +125,7 @@ func TestTeamUsecase_AddTeam_UserInAnotherTeam(t *testing.T) {
 	repo := new(mockTeamRepository)
 	userRepo := new(mockUserRepository)
 	prRepo := new(mockPRRepository)
-	prUC := new(mockPRUsecase)
+	prUC := NewPRUsecase(prRepo, userRepo, repo, testLogger())
 
 	uc := NewTeamUsecase(repo, userRepo, prRepo, prUC, testLogger())
 
@@ -156,7 +156,7 @@ func TestTeamUsecase_GetTeam_NotFound(t *testing.T) {
 	repo := new(mockTeamRepository)
 	userRepo := new(mockUserRepository)
 	prRepo := new(mockPRRepository)
-	prUC := new(mockPRUsecase)
+	prUC := NewPRUsecase(prRepo, userRepo, repo, testLogger())
 
 	uc := NewTeamUsecase(repo, userRepo, prRepo, prUC, testLogger())
 
@@ -174,7 +174,7 @@ func TestTeamUsecase_GetTeam_Success(t *testing.T) {
 	repo := new(mockTeamRepository)
 	userRepo := new(mockUserRepository)
 	prRepo := new(mockPRRepository)
-	prUC := new(mockPRUsecase)
+	prUC := NewPRUsecase(prRepo, userRepo, repo, testLogger())
 
 	uc := NewTeamUsecase(repo, userRepo, prRepo, prUC, testLogger())
 

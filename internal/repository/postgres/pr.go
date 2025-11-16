@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"time"
 )
 
 type prRepository struct {
@@ -78,39 +79,38 @@ func (r *prRepository) GetPR(ctx context.Context, prID string) (models.PullReque
 	return pr, nil
 }
 
-func (r *prRepository) MergePR(ctx context.Context, prID string) error {
+func (r *prRepository) MergePR(ctx context.Context, prID string) (*time.Time, error) {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer tx.Rollback(ctx)
 
 	var status string
-	err = tx.QueryRow(ctx, `SELECT status FROM pull_requests WHERE id = $1 FOR UPDATE`, prID).
-		Scan(&status)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return models.ErrNotFound
-		}
-		return err
+	err = tx.QueryRow(ctx, `SELECT status FROM pull_requests WHERE id = $1 FOR UPDATE`, prID).Scan(&status)
+	if err != nil { /* ... */
 	}
+
 	if status == "MERGED" {
-		return models.ErrPRMerged
+		return nil, models.ErrPRMerged
 	}
 	if status != "OPEN" {
-		return models.ErrInvalidStatus
+		return nil, models.ErrInvalidStatus
 	}
 
-	_, err = tx.Exec(ctx, `
+	var mergedAt time.Time
+	err = tx.QueryRow(ctx, `
         UPDATE pull_requests 
-        SET status = 'MERGED', merged_at = NOW() 
+        SET status = 'MERGED', 
+            merged_at = COALESCE(merged_at, NOW())
         WHERE id = $1
-    `, prID)
+        RETURNING merged_at
+    `, prID).Scan(&mergedAt)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return tx.Commit(ctx)
+	return &mergedAt, tx.Commit(ctx)
 }
 
 func (r *prRepository) ReassignReviewer(ctx context.Context, prID, oldUID, newUID string) error {

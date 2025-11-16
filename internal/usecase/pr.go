@@ -95,12 +95,13 @@ func (u *prUsecase) MergePR(ctx context.Context, prID string) (models.PullReques
 		return models.PullRequest{}, models.ErrInvalidStatus
 	}
 
-	if err := u.prRepo.MergePR(ctx, prID); err != nil {
+	mergedAt, err := u.prRepo.MergePR(ctx, prID)
+	if err != nil {
 		return models.PullRequest{}, err
 	}
 
 	pr.Status = models.StatusMerged
-	pr.MergedAt = utils.Ptr(time.Now())
+	pr.MergedAt = mergedAt
 	return pr, nil
 }
 

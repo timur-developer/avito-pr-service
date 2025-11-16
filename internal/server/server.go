@@ -46,7 +46,7 @@ func New(cfg config.Config) (*Server, error) {
 
 	r := chi.NewRouter()
 	c := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"}, // Для теста; в прод — укажи домен Swagger
+		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,
@@ -55,6 +55,11 @@ func New(cfg config.Config) (*Server, error) {
 	r.Use(c.Handler)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+
+	// редирект на сваггер
+	r.Get("/docs", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "http://localhost:8081", http.StatusFound)
+	})
 
 	teamHandler.Register(r)
 	userHandler.Register(r)

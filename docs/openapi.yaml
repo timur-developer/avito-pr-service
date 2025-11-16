@@ -2,17 +2,14 @@ openapi: 3.0.3
 info:
   title: PR Reviewer Assignment Service (Test Task, Fall 2025)
   version: "1.0.0"
-
 servers:
   - url: http://localhost:8080
     description: API Server
-
 tags:
   - name: Teams
   - name: Users
   - name: PullRequests
   - name: Health
-
 components:
   parameters:
     TeamNameQuery:
@@ -124,7 +121,36 @@ components:
         status:
           type: string
           enum: [OPEN, MERGED]
-
+    UserStats:
+      type: object
+      required: [ user_id, team_name, username, assignment_count ]
+      properties:
+        user_id:
+          type: string
+        team_name:
+          type: string
+        username:
+          type: string
+        assignment_count:
+          type: integer
+        assigned_prs:
+          type: array
+          items:
+            type: string
+    DeactivateTeamRequest:
+      type: object
+      required: [ team_name ]
+      properties:
+        team_name:
+          type: string
+    DeactivateTeamResponse:
+      type: object
+      required: [ deactivated_users, reassigned_prs ]
+      properties:
+        deactivated_users:
+          type: integer
+        reassigned_prs:
+          type: integer
 paths:
   /team/add:
     post:
@@ -174,7 +200,6 @@ paths:
                 error:
                   code: TEAM_EXISTS
                   message: team_name already exists
-
   /team/get:
     get:
       tags: [Teams]
@@ -202,7 +227,6 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
-
   /users/setIsActive:
     post:
       tags: [Users]
@@ -243,7 +267,6 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
-
   /pullRequest/create:
     post:
       tags: [PullRequests]
@@ -292,7 +315,6 @@ paths:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
               example:
                 error: { code: PR_EXISTS, message: PR id already exists }
-
   /pullRequest/merge:
     post:
       tags: [PullRequests]
@@ -331,7 +353,6 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
-
   /pullRequest/reassign:
     post:
       tags: [PullRequests]
@@ -394,7 +415,6 @@ paths:
                   summary: Нет доступных кандидатов
                   value:
                     error: { code: NO_CANDIDATE, message: no active replacement candidate in team }
-
   /users/getReview:
     get:
       tags: [Users]
@@ -423,3 +443,80 @@ paths:
                     pull_request_name: Add search
                     author_id: u1
                     status: OPEN
+  /stats/users:
+    get:
+      tags: [Users]
+      summary: Получить статистику по всем пользователям (количество назначений, список назначенных PR)
+      responses:
+        '200':
+          description: Статистика пользователей
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stats:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserStats'
+              example:
+                stats:
+                  - user_id: u1
+                    team_name: backend
+                    username: Alice
+                    assignment_count: 5
+                    assigned_prs: [pr-1, pr-2, pr-3, pr-4, pr-5]
+                  - user_id: u2
+                    team_name: backend
+                    username: Bob
+                    assignment_count: 3
+                    assigned_prs: [pr-6, pr-7, pr-8]
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: INTERNAL
+                  message: server error
+  /team/deactivate:
+    post:
+      tags: [Teams]
+      summary: Деактивировать всех пользователей команды и переназначить ревьюверов в открытых PR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeactivateTeamRequest'
+            example:
+              team_name: backend
+      responses:
+        '200':
+          description: Результат деактивации
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deactivate:
+                    $ref: '#/components/schemas/DeactivateTeamResponse'
+              example:
+                deactivate:
+                  deactivated_users: 3
+                  reassigned_prs: 2
+        '404':
+          description: Команда не найдена
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: NOT_FOUND
+                  message: team not found
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }

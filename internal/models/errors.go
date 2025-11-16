@@ -42,9 +42,9 @@ var (
 	ErrUserNotFound      = AppError{Code: ErrorNotFound, Message: "user not found"}
 	ErrNotFound          = AppError{Code: ErrorNotFound, Message: "not found"}
 	ErrPRExists          = AppError{Code: ErrorPRExists, Message: "pull request already exists"}
-	ErrNotAssigned       = AppError{Code: ErrorNotAssigned, Message: "not assigned"}
-	ErrNoCandidate       = AppError{Code: ErrorNoCandidate, Message: "no candidate"}
-	ErrPRMerged          = AppError{Code: ErrorPRMerged, Message: "pull request already merged"}
+	ErrNotAssigned       = AppError{Code: ErrorNotAssigned, Message: "reviewer is not assigned to this PR"}
+	ErrNoCandidate       = AppError{Code: ErrorNoCandidate, Message: "no active replacement candidate in team"}
+	ErrPRMerged          = AppError{Code: ErrorPRMerged, Message: "cannot reassign on merged PR"}
 	ErrInvalidStatus     = AppError{Code: ErrorInvalidStatus, Message: "invalid pull request status"}
 	ErrInvalidReviewer   = AppError{Code: ErrorInvalidReviewer, Message: "new reviewer must be active and from the same team"}
 	ErrAlreadyAssigned   = AppError{Code: ErrorAlreadyAssigned, Message: "new reviewer already assigned"}

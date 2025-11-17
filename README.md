@@ -4,6 +4,8 @@
 
 ## Запуск приложения
 
+**Требования:** установленный и запущенный Docker (https://www.docker.com/) и свободные порты: 5432 (для PostgreSQL), 8080 (само API), 8081 (Swagger)
+
 1) Сделайте клон репозитория с помощью терминала:
 ```
 git clone https://github.com/timur-developer/avito-pr-service
@@ -12,11 +14,15 @@ git clone https://github.com/timur-developer/avito-pr-service
 
 3) Откройте терминал в папке с проектом
 
-4) При первом запуске используйте `docker-compose up --build`/`docker-compose up --build -d` (при последующих запусках `docker-compose up`/`docker-compose up -d` Это поднимет:
-- БД PostgreSQL на 5432 порту
-- Миграции
-- Сам сервис на http://localhost:8080
-- Swagger UI на http://localhost:8081
+4) Запустите контейнеры:
+    - При первом запуске используйте `docker-compose up --build` или `docker-compose up --build -d`
+    - При последующих запусках `docker-compose up` или `docker-compose up -d`
+
+   Это поднимет:
+   - БД PostgreSQL на порту 5432
+   - Миграции
+   - Сам сервис на http://localhost:8080
+   - Swagger UI на http://localhost:8081
 
 ## Swagger для тестов
 
@@ -51,7 +57,7 @@ git clone https://github.com/timur-developer/avito-pr-service
 
 **Интеграционные/E2E тесты:** Интеграционные на repository на весь функционал.
 
-**Линтер** Добавил golangci-lint (используйте golangci-lint run для запуска)
+**Линтер:** Добавил golangci-lint (используйте golangci-lint run для запуска)
 
 **Нагрузочное тестирование:**
 
@@ -69,6 +75,7 @@ git clone https://github.com/timur-developer/avito-pr-service
 
 
 *Надеюсь, вам понравится сервис! Хорошего дня!*
+
 
 
 
